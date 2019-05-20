@@ -9,10 +9,23 @@
 
 // Globals
 var screen_width = 50;
-var screen_height = 40;
+var screen_height = 25;
 var screen_buffer = "";
 var screen_matrix = null;
-var game_period = 0.5;  // updates per sec
+var game_period = 0.2;  // updates per sec
+var snake_len = 3;
+
+var max_score_per_diff = [
+    1,
+    2,
+    5
+]
+
+var speed_per_diff = [
+    0.2,
+    0.1,
+    0.05
+]
 
 // Refs
 var game_body_div = null;
@@ -20,37 +33,65 @@ var game_score_div = null;
 
 // Locals
 var pos_x = 25;
-var pos_y = 20;
+var pos_y = 10;
 var snake_positions = [];
+
+var fruit_valid = false;
+var fruit_x = 0;
+var fruit_y = 0;
+
 var score = 0;
+var diff_level = 0;
 
 // up down left right
 var move_dir = "up"
 
+function random_from_range(min, max)
+{
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
 function key_down(event)
 {
+    var head_x = pos_x;
+    var head_y = pos_y;
+    var neck_x = snake_positions[snake_positions.length - 2][0];
+    var neck_y = snake_positions[snake_positions.length - 2][1];
+
     // Move left
     if (event.key == "ArrowLeft" || event.key == "a")
     {
-        move_dir = "left";
+        if (head_x - 1 != neck_x)
+        {
+            move_dir = "left";
+        }
     }
 
     // Move right
     if (event.key == "ArrowRight" || event.key == "d")
     {
-        move_dir = "right";
+        if (head_x + 1 != neck_x)
+        {
+            move_dir = "right";
+        }
     }
 
     // Move up
     if (event.key == "ArrowUp" || event.key == "w")
     {
-        move_dir = "up";
+        if (head_y - 1 != neck_y)
+        {
+            move_dir = "up";
+        }
     }
 
     // Move down
     if (event.key == "ArrowDown" || event.key == "s")
     {
-        move_dir = "down"
+        if (head_y + 1 != neck_y)
+        {
+            move_dir = "down"
+        }
     }
 
     refresh_screen();
@@ -74,7 +115,6 @@ function init_screen()
 function init_snake()
 {
     var i;
-    snake_len = 10;
     for (i = 1; i <= snake_len; i++)
     {
         snake_positions.push([pos_x, pos_y + snake_len - i]);
@@ -127,16 +167,26 @@ function draw_snake()
     }
 }
 
+function draw_fruit()
+{
+    if (fruit_valid)
+    {
+        screen_matrix[fruit_y][fruit_x] = 'Q';
+    }
+}
+
 function refresh_screen()
 {
     clear_screen();
     draw_snake();
+    draw_fruit();
     flush_screen_buffer();
 }
 
 function game_loop()
 {
     move_snake();
+    check_fruit_collected();
     refresh_screen();
 }
 
@@ -179,7 +229,53 @@ function move_snake()
 
 function update_score()
 {
-    game_score_div.innerHTML = "Score: " + score;
+    game_score_div.innerHTML = "Score: " + score + "<br>" + 
+        "Level: " + (diff_level + 1);
+}
+
+function spawn_fruit()
+{
+    var fruit_spawned = false;
+    while (!fruit_spawned)
+    {
+        fruit_x = random_from_range(1, screen_width - 2);
+        fruit_y = random_from_range(1, screen_height - 2);
+
+        fruit_spawned = true;
+        for (var i = 0; i < snake_positions.length; i++)
+        {
+            if (snake_positions[0] == fruit_x && snake_positions[1] == fruit_y)
+            {
+                fruit_spawned = false;
+                break;
+            }
+        }
+    }
+
+    fruit_valid = true;
+}
+
+function check_fruit_collected()
+{
+    if (!fruit_valid)
+    {
+        return;
+    }
+
+    if (fruit_x == pos_x && fruit_y == pos_y)
+    {
+        score++;
+        if (diff_level < max_score_per_diff.length)
+        {
+            if (score >= max_score_per_diff[diff_level])
+            {
+                diff_level++;
+            }
+        }
+
+        update_score();
+        spawn_fruit();
+    }
 }
 
 function game()
@@ -189,6 +285,7 @@ function game()
 
     init_screen();
     init_snake();
+    spawn_fruit();
     refresh_screen();
     update_score();
 
